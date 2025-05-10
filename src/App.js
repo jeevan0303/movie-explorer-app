@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, createContext, useCallback } from 'react';
+import React, { useState, useEffect, useContext, createContext } from 'react';
 import axios from 'axios';
 import { BrowserRouter as Router, Routes, Route, Link, useParams, useNavigate } from 'react-router-dom';
 import styled, { ThemeProvider } from 'styled-components';
@@ -20,7 +20,7 @@ const darkTheme = {
   body: '#121212',
   text: '#ffffff',
   navbar: '#000000',
-  cardBg: '#1a1a2a',
+  cardBg: '#1a1a1a',
   cardText: '#ffffff',
   inputBg: '#2a2a2a',
 };
@@ -158,9 +158,9 @@ const ThemeContext = createContext();
 function ThemeProviderWrapper({ children }) {
   const [theme, setTheme] = useState('light');
   
-  const toggleTheme = useCallback(() => {
+  const toggleTheme = () => {
     setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
-  }, []);
+  };
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
@@ -176,7 +176,7 @@ function AuthProvider({ children }) {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState('login');
 
-  const login = useCallback(async (username, password) => {
+  const login = async (username, password) => {
     return new Promise((resolve) => {
       setTimeout(() => {
         setUser(username);
@@ -185,35 +185,33 @@ function AuthProvider({ children }) {
         resolve();
       }, 500);
     });
-  }, []);
+  };
 
-  const logout = useCallback(() => {
+  const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
-  }, []);
+  };
 
-  const openAuthModal = useCallback((mode) => {
+  const openAuthModal = (mode) => {
     setAuthMode(mode);
     setShowAuthModal(true);
-  }, []);
+  };
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) setUser(storedUser);
   }, []);
 
-  const value = {
-    user, 
-    login, 
-    logout, 
-    showAuthModal, 
-    setShowAuthModal,
-    openAuthModal,
-    authMode
-  };
-
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{ 
+      user, 
+      login, 
+      logout, 
+      showAuthModal, 
+      setShowAuthModal,
+      openAuthModal,
+      authMode
+    }}>
       {children}
     </AuthContext.Provider>
   );
@@ -225,24 +223,25 @@ function MovieProvider({ children }) {
 
   const [movies, setMovies] = useState([]);
   const [trendingMovies, setTrendingMovies] = useState([]);
+  const [currentMovie, setCurrentMovie] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [favorites, setFavorites] = useState([]);
   const [searchHistory, setSearchHistory] = useState([]);
 
-  const fetchTrendingMovies = useCallback(async () => {
+  const fetchTrendingMovies = async () => {
     try {
       const response = await axios.get(
-        `${BASE_URL}/trending/movie/week?api_key=${API_KEY}`
+        `${BASE_URL}/trending/movie/week?api_key=${API_KEY}&append_to_response=videos`
       );
       return response.data.results;
     } catch (err) {
       throw new Error('Failed to fetch trending movies');
     }
-  }, [API_KEY]);
+  };
 
-  const fetchMovieDetails = useCallback(async (id) => {
+  const fetchMovieDetails = async (id) => {
     try {
       setIsLoading(true);
       const response = await axios.get(
@@ -254,30 +253,30 @@ function MovieProvider({ children }) {
     } finally {
       setIsLoading(false);
     }
-  }, [API_KEY]);
+  };
 
-  const searchMovies = useCallback(async (query) => {
+  const searchMovies = async (query) => {
     try {
       setIsLoading(true);
       setSearchQuery(query);
       const response = await axios.get(
-        `${BASE_URL}/search/movie?api_key=${API_KEY}&query=${query}`
+        `${BASE_URL}/search/movie?api_key=${API_KEY}&query=${query}&append_to_response=videos`
       );
       setMovies(response.data.results);
-      setSearchHistory(prev => [...new Set([...prev, query])]);
+      setSearchHistory(prev => [...prev, query]);
     } catch (err) {
       setError(err.message);
     } finally {
       setIsLoading(false);
     }
-  }, [API_KEY]);
+  };
 
-  const clearSearch = useCallback(() => {
+  const clearSearch = () => {
     setSearchQuery('');
     setMovies([]);
-  }, []);
+  };
 
-  const toggleFavorite = useCallback((movie) => {
+  const toggleFavorite = (movie) => {
     setFavorites(prev => {
       const isFavorite = prev.some(fav => fav.id === movie.id);
       if (isFavorite) {
@@ -286,7 +285,7 @@ function MovieProvider({ children }) {
         return [...prev, movie];
       }
     });
-  }, []);
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -301,24 +300,22 @@ function MovieProvider({ children }) {
       }
     };
     loadData();
-  }, [fetchTrendingMovies]);
-
-  const value = {
-    movies,
-    trendingMovies,
-    searchQuery,
-    isLoading,
-    error,
-    searchMovies,
-    clearSearch,
-    fetchMovieDetails,
-    favorites,
-    toggleFavorite,
-    searchHistory
-  };
+  }, []);
 
   return (
-    <MovieContext.Provider value={value}>
+    <MovieContext.Provider value={{
+      movies,
+      trendingMovies,
+      searchQuery,
+      isLoading,
+      error,
+      searchMovies,
+      clearSearch,
+      fetchMovieDetails,
+      favorites,
+      toggleFavorite,
+      searchHistory
+    }}>
       {children}
     </MovieContext.Provider>
   );
@@ -330,10 +327,10 @@ function AuthModal() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleSubmit = useCallback(async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     await login(username, password);
-  }, [login, username, password]);
+  };
 
   if (!showAuthModal) return null;
 
@@ -449,7 +446,7 @@ function MovieList({ movies }) {
                   <h3>{movie.title}</h3>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <FaStar color="#FFD700" />
-                    <span>{movie.vote_average?.toFixed(1)}</span>
+                    <span>{movie.vote_average.toFixed(1)}</span>
                   </div>
                 </div>
               </MovieCard>
@@ -534,7 +531,7 @@ function MovieDetail() {
   if (!movie) return <div>Movie not found</div>;
 
   const isFavorite = favorites.some(fav => fav.id === movie.id);
-  const trailer = movie.videos?.results?.find(video => video.type === 'Trailer');
+  const trailer = movie.videos?.results.find(video => video.type === 'Trailer');
 
   return (
     <MovieDetailContainer>
@@ -586,7 +583,7 @@ function MovieDetail() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', margin: '1rem 0' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
               <FaStar color="#FFD700" />
-              <span>{movie.vote_average?.toFixed(1)}/10</span>
+              <span>{movie.vote_average.toFixed(1)}/10</span>
             </div>
             <span>•</span>
             <span>{movie.runtime} min</span>
@@ -597,7 +594,7 @@ function MovieDetail() {
           <div style={{ marginBottom: '1rem' }}>
             <h3>Genres</h3>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-              {movie.genres?.map(genre => (
+              {movie.genres.map(genre => (
                 <span key={genre.id} style={{ 
                   padding: '0.3rem 0.8rem', 
                   backgroundColor: '#4CAF50', 
@@ -641,7 +638,7 @@ function MovieDetail() {
       <div>
         <h2>Cast</h2>
         <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', padding: '1rem 0' }}>
-          {movie.credits?.cast?.slice(0, 10).map(actor => (
+          {movie.credits.cast.slice(0, 10).map(actor => (
             <div key={actor.id} style={{ minWidth: '120px', textAlign: 'center' }}>
               <img
                 src={actor.profile_path 
@@ -700,12 +697,12 @@ function Home() {
   const [searchInput, setSearchInput] = useState('');
   const navigate = useNavigate();
 
-  const handleSearch = useCallback((e) => {
+  const handleSearch = (e) => {
     e.preventDefault();
     if (searchInput.trim()) {
       searchMovies(searchInput);
     }
-  }, [searchInput, searchMovies]);
+  };
 
   return (
     <div style={{ padding: '2rem' }}>
